@@ -2,16 +2,19 @@
 /**
  * claude-poke CLI — a local Claude Code session manager that Poke controls.
  *
- *   claude-poke            → guided setup/doctor (checks Claude login, Poke login, optional notify key)
- *   claude-poke start      → launch the bridge + Poke tunnel (mints the recipe on first run)
+ *   claude-poke            → (default) connect the bridge to Poke; runs setup on first use
+ *   claude-poke setup      → guided setup/doctor (Claude login, Poke login, optional notify key)
  *   claude-poke serve      → just the MCP server (advanced / pm2)
- *   claude-poke recipe     → (re)mint your Poke recipe link
+ *   claude-poke recipe     → show the Poke recipe link to install
  *   claude-poke doctor     → re-run the checks, no prompts
  *   claude-poke status     → show config + session counts
+ *
+ * Poke auth + tunneling are done in-process via the `poke` SDK (login / PokeTunnel) — no child process.
  */
-import { spawn, execSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import { Command } from "commander";
 import * as p from "@clack/prompts";
+import { PokeTunnel, login, isLoggedIn } from "poke";
 import {
   loadConfig,
   saveConfig,
@@ -23,8 +26,6 @@ import {
 } from "./config.js";
 import { startServer } from "./server.js";
 import { listSessions, listLiveSessions } from "./sessionStore.js";
-
-const POKE = ["-y", "poke@latest"];
 
 // The ONE shared recipe, published once from the maintainer's Poke account (poke.com/kitchen).
 // Every user installs this same link; their own `claude-poke start` connects their bridge.
@@ -57,13 +58,12 @@ async function setup(opts: { chainToStart?: boolean } = {}): Promise<void> {
     p.note("Claude Code isn't signed in here. Open a new terminal, run `claude`, and log in — then re-run setup.", "Claude");
   }
 
-  // CHECK 3 — Poke login + optional notification key
-  if (!pokeWhoami()) {
-    p.note("Opening Poke login in your browser…", "Poke");
-    await run(`npx ${POKE.join(" ")} login`);
-    if (!pokeWhoami()) p.note("Couldn't confirm your Poke login. `claude-poke start` may ask again.", "Poke");
+  // CHECK 3 — Poke login (via the poke SDK) + optional notification key
+  if (!isLoggedIn()) {
+    await pokeLogin();
+    if (!isLoggedIn()) p.note("Couldn't confirm your Poke login. `start` will ask again.", "Poke");
   } else {
-    p.note("✓ Poke CLI is logged in.", "Poke");
+    p.note("✓ Poke is logged in.", "Poke");
   }
 
   const wantNotify = await p.confirm({
@@ -105,8 +105,8 @@ function doctor(): void {
   const ok = (b: boolean) => (b ? "✓" : "✗");
   console.log(`Node ${process.versions.node}            ${ok(Number(process.versions.node.split(".")[0]) >= 18)}`);
   console.log(`Claude Code signed in        ${ok(hasLocalClaudeAuth())}`);
-  console.log(`Poke CLI logged in           ${ok(pokeWhoami())}`);
-  console.log(`Bridge secret set            ${ok(!!cfg.sharedSecret)}`);
+  console.log(`Poke logged in               ${ok(isLoggedIn())}`);
+  console.log(`Bearer secret                ${cfg.sharedSecret ? "set (enforced)" : "none (tunnel + localhost is the boundary)"}`);
   console.log(`Proactive notifications      ${cfg.pokeApiKey ? "ON" : "OFF (optional)"}`);
   console.log(`Config                       ${configPath()}`);
 }
@@ -130,33 +130,26 @@ async function start(): Promise<void> {
   console.log(`\n  claude-poke bridge listening on ${url}`);
   console.log(`  notifications: ${cfg.pokeApiKey ? "on" : "off"}\n`);
   console.log(
-    `  Connecting your bridge to Poke (first run downloads the tunnel — may take ~30s)…\n` +
-      `  This registers it in your Poke account as the "Claude Code" integration.\n` +
+    `  Connecting your bridge to Poke as the "Claude Code" integration…\n` +
       `  ┌─ One-time: add the Claude Code recipe to your Poke ─────────────\n` +
       `  │   ${RECIPE_URL}\n` +
       `  └─ Then text Poke, e.g. "list my Claude sessions".\n` +
       `  Keep this window open and the PC awake while you use it.\n`,
   );
 
-  // No --recipe: the shared recipe is published once by the maintainer (RECIPE_URL). This tunnel
-  // just forwards the local port and registers the per-user "Claude Code" integration. `poke tunnel`
-  // has no API-key flag — the account-scoped tunnel + 127.0.0.1 bind is the boundary.
-  // Single command string (not args + shell:true) to avoid Node's DEP0190 warning.
-  const cmd = `npx ${POKE.join(" ")} tunnel "${url}" -n "Claude Code"`;
-  const tunnel = spawn(cmd, { stdio: ["ignore", "pipe", "pipe"], shell: true });
+  if (!isLoggedIn()) await pokeLogin();
 
-  let connected = false;
-  const onChunk = (buf: Buffer) => {
-    process.stdout.write(buf);
-    if (!connected && /connected|tunnel|listening|ready/i.test(buf.toString("utf8"))) {
-      connected = true;
-      console.log(`\n  ✅ Bridge connected. If you haven't yet, open the recipe link above in Poke, then text it.\n`);
-    }
-  };
-  tunnel.stdout?.on("data", onChunk);
-  tunnel.stderr?.on("data", onChunk);
+  // Tunnel programmatically via the poke SDK (PokeTunnel) — in-process, no child process / npx download.
+  // The account-scoped tunnel + 127.0.0.1 bind is the boundary (no per-request bearer in this flow).
+  const tunnel = new PokeTunnel({ url, name: "Claude Code", cleanupOnStop: false });
+  tunnel
+    .on("connected", (info) => console.log(`\n  ✅ Bridge connected to Poke as "${info.name}". Open the recipe link above, then text Poke.\n`))
+    .on("toolsSynced", ({ toolCount }) => console.log(`  Poke synced ${toolCount} Claude Code tools.`))
+    .on("oauthRequired", ({ authUrl }) => console.log(`  Poke needs you to authorize: ${authUrl}`))
+    .on("disconnected", () => console.log(`  ⚠ Poke tunnel disconnected — attempting to reconnect…`))
+    .on("error", (err) => console.error(`  Tunnel error: ${err.message}`));
 
-  const shutdown = () => {
+  const shutdown = async () => {
     for (const s of manager.list()) {
       try {
         manager.stop(s.sessionId);
@@ -164,19 +157,25 @@ async function start(): Promise<void> {
         /* ignore */
       }
     }
-    tunnel.kill();
+    try {
+      await tunnel.stop();
+    } catch {
+      /* ignore */
+    }
     server.close();
     process.exit(0);
   };
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
-  tunnel.on("exit", (code) => {
-    console.log(`\n  Connection to Poke stopped (often the PC slept, the lid closed, or Wi-Fi dropped).`);
-    console.log(`  To use it again, run:  claude-poke start`);
-    console.log(`  If Poke still can't reach Claude Code after that, run \`claude-poke recipe\` to re-link.\n`);
+  process.on("SIGINT", () => void shutdown());
+  process.on("SIGTERM", () => void shutdown());
+
+  try {
+    await tunnel.start(); // resolves once connected; the tunnel then keeps the process alive
+  } catch (e) {
+    console.error(`\n  Couldn't connect to Poke: ${(e as Error)?.message ?? e}`);
+    console.error(`  Check your internet and Poke login (re-run \`${launchHint()} setup\`), then try again.\n`);
     server.close();
-    process.exit(code ?? 0);
-  });
+    process.exit(1);
+  }
 }
 
 async function serve(): Promise<void> {
@@ -184,8 +183,8 @@ async function serve(): Promise<void> {
   await startServer(cfg);
   const url = `http://localhost:${cfg.port}/mcp`;
   console.log(`claude-poke MCP server on ${url}`);
-  console.log(`Connect it to Poke yourself:`);
-  console.log(`  npx ${POKE.join(" ")} tunnel ${url} -n "Claude Code"`);
+  console.log(`Connect it to Poke yourself (the bundled poke CLI, or \`${launchHint()}\` which tunnels for you):`);
+  console.log(`  npx -y poke@latest tunnel ${url} -n "Claude Code"`);
   console.log(`Then add the Claude Code recipe to your Poke: ${RECIPE_URL}`);
 }
 
@@ -206,20 +205,18 @@ async function status(): Promise<void> {
 }
 
 // ---------------------------------------------------------------- helpers
-function pokeWhoami(): boolean {
+/** Log in to Poke via the SDK (device-code flow; opens the browser). */
+async function pokeLogin(): Promise<void> {
+  console.log("  Logging in to Poke (a browser window will open)…");
   try {
-    execSync(`npx ${POKE.join(" ")} whoami`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
+    await login({
+      openBrowser: true,
+      onCode: ({ userCode, loginUrl }) => console.log(`  If the browser didn't open, go to ${loginUrl} and enter code: ${userCode}`),
+    });
+    console.log("  ✓ Logged in to Poke.");
+  } catch (e) {
+    console.error(`  Poke login failed: ${(e as Error)?.message ?? e}`);
   }
-}
-function run(cmd: string): Promise<void> {
-  return new Promise((res) => {
-    const child = spawn(cmd, { stdio: "inherit", shell: true });
-    child.on("exit", () => res());
-    child.on("error", () => res());
-  });
 }
 /** Best command to (re)launch the bridge — `claude-poke` if globally installed, else the npx form. */
 function launchHint(): string {
