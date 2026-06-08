@@ -70,7 +70,12 @@ export function startServer(cfg: Config): Promise<{ server: Server; manager: Ses
   const manager = new SessionManager(cfg);
   const app = buildApp(manager, loadConfig);
   const server = createServer(app);
-  return new Promise((resolve) => {
-    server.listen(cfg.port, "127.0.0.1", () => resolve({ server, manager }));
+  return new Promise((resolve, reject) => {
+    const onError = (err: Error) => reject(err); // e.g. EADDRINUSE — don't crash with an unhandled 'error'
+    server.once("error", onError);
+    server.listen(cfg.port, "127.0.0.1", () => {
+      server.removeListener("error", onError);
+      resolve({ server, manager });
+    });
   });
 }

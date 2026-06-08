@@ -116,7 +116,16 @@ async function start(): Promise<void> {
   if (!configExists()) await setup({ chainToStart: true });
   const cfg = loadConfig();
 
-  const { server, manager } = await startServer(cfg);
+  const { server, manager } = await startServer(cfg).catch((e: NodeJS.ErrnoException) => {
+    if (e?.code === "EADDRINUSE") {
+      console.error(`\n  Port ${cfg.port} is already in use — claude-poke may already be running in another window,`);
+      console.error(`  or another app is using it. Close the other instance, or pick a different port:`);
+      console.error(`     PORT=4600 ${launchHint()}\n`);
+    } else {
+      console.error(`\n  Couldn't start the bridge: ${(e as Error)?.message ?? e}\n`);
+    }
+    process.exit(1);
+  });
   const url = `http://localhost:${cfg.port}/mcp`;
   console.log(`\n  claude-poke bridge listening on ${url}`);
   console.log(`  notifications: ${cfg.pokeApiKey ? "on" : "off"}\n`);
