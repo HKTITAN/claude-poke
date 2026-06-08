@@ -1,0 +1,61 @@
+name: "\U0001F4A1 Feature request"
+description: Suggest an idea or improvement for claude-poke.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please search
+        [existing issues](https://github.com/HKTITAN/claude-poke/issues?q=is%3Aissue) first so we can keep
+        related ideas together.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and this has not already been requested.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: "What are you trying to do that's hard or impossible today? What's the pain?"
+      placeholder: "When I'm away from my PC, I want to ... but currently ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to happen.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this touch?
+      options:
+        - CLI (setup / start / serve / doctor / status)
+        - MCP tools (start_session, send_message, tail_session, etc.)
+        - Session control (managed / resumable / live)
+        - Permission modes / security
+        - Notifications (Poke texts)
+        - Docs / setup experience
+        - Other / not sure
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds you've tried or other approaches you weighed.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links, example Poke texts, or anything else that helps.
+    validations:
+      required: false

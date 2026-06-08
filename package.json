@@ -1,0 +1,40 @@
+{
+  "name": "@hktitan/claude-poke",
+  "version": "0.2.1",
+  "description": "Let Poke run & control Claude Code sessions on your own machine. One npx command to set up. No API key — uses your Claude subscription login.",
+  "type": "module",
+  "license": "MIT",
+  "author": "HKTITAN",
+  "repository": { "type": "git", "url": "git+https://github.com/HKTITAN/claude-poke.git" },
+  "homepage": "https://github.com/HKTITAN/claude-poke#readme",
+  "bugs": { "url": "https://github.com/HKTITAN/claude-poke/issues" },
+  "keywords": ["claude", "claude-code", "poke", "mcp", "ai", "agent", "cli", "anthropic", "sessions"],
+  "engines": { "node": ">=18" },
+  "bin": { "claude-poke": "dist/cli.js" },
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
+  "files": ["dist", "recipe.json", ".env.example", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test",
+    "setup": "node dist/cli.js setup",
+    "start": "node dist/cli.js start",
+    "serve": "node dist/cli.js serve",
+    "dev": "tsx src/cli.ts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.77",
+    "@clack/prompts": "^0.7.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^12.1.0",
+    "express": "^4.21.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5.8.2"
+  }
+}

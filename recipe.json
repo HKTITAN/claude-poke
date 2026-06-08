@@ -1,0 +1,19 @@
+{
+  "//": "Source of truth for the ONE shared Poke recipe. The maintainer publishes this ONCE from their own Poke account at poke.com/kitchen → Create recipe (transcribe these fields), which yields a single poke.com/r/<code> link. Every user installs that same link; their own `claude-poke start` connects their local bridge (via `poke tunnel -n \"Claude Code\"`) as the per-user 'Claude Code' integration. Do NOT use `poke tunnel --recipe` (that mints a per-user recipe — not what we want).",
+  "name": "Claude Code",
+  "description": "Run and control Claude Code sessions on your own computer, by text. Start a session in any folder, send follow-ups, watch what it's doing, approve actions, and get pinged when it's done.",
+  "tags": ["Developer"],
+  "inputContext": "You control Claude Code SESSIONS running on the user's own machine through the connected 'Claude Code' MCP integration. A session is a live Claude Code conversation tied to a folder. Tools: list_sessions (managed=controllable, resumable=past session you can resume, live=a terminal session you can only watch); start_session(cwd, task, ...) which STARTS a session and returns a session_id; send_message(session_id, message) to continue a session; resume_session(session_id, message, fork?) to take over a past/live session; get_session(session_id) for status+output; tail_session(session_id) to read-only watch; interrupt_session, set_model, set_permission_mode, respond_permission(session_id, approve) to answer a 'needs input' prompt, stop_session; list_models, list_commands, account_info, get_diff. ALWAYS call list_sessions first if you don't know a session_id. start_session and send_message are ASYNC: they return immediately; then either wait for the proactive finish/needs-input text, or poll get_session every few seconds until status is idle/finished/error, then summarize. When the user replies to a notification, find the right session by the short id in that message and call send_message (or respond_permission if it was a needs-input prompt). Never invent a folder path or session id. Default permission is full power (bypassPermissions); pass permission_mode='plan' if the user only wants proposals.",
+  "prefilledFirstText": "List my recent Claude Code sessions, or start a new one in a folder I name.",
+  "requiredIntegrations": [
+    {
+      "name": "Claude Code",
+      "type": "mcp",
+      "transport": "streamable-http",
+      "perUser": true,
+      "urlNote": "NOT a fixed URL. Each user connects their OWN bridge: `claude-poke start` runs `poke tunnel -n \"Claude Code\" -k <secret>`, which registers their local tunnel as the 'Claude Code' integration in their own Poke account. The published recipe supplies the onboarding context; the connection is per-user.",
+      "auth": { "type": "apiKey", "header": "Authorization: Bearer <sharedSecret>", "note": "Each user's own auto-generated bridge secret; passed by their `start` via `poke tunnel -k`. Not shared across users." },
+      "shared": false
+    }
+  ]
+}

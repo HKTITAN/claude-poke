@@ -1,0 +1,129 @@
+name: "\U0001F41B Bug report"
+description: Report a problem with claude-poke (the bridge, a session, or a tool).
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report!
+
+        claude-poke runs Claude Code on your own machine, so the details below help a lot.
+        Please search [existing issues](https://github.com/HKTITAN/claude-poke/issues?q=is%3Aissue) first to avoid duplicates.
+
+        > [!WARNING]
+        > **Do not paste secrets or tokens.** Logs from claude-poke may contain your bearer `sharedSecret`,
+        > a Poke API key, or a GitHub token. Redact anything that looks like a credential before pasting
+        > (replace it with `***`). The bearer secret is the only trust boundary for this tool.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and this has not already been reported.
+          required: true
+        - label: I confirmed there are no secrets, bearer tokens, API keys, or access tokens in anything I pasted below.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: claude-poke version
+      description: "Output of `claude-poke --version` (or the `version` in package.json you installed)."
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other (note in repro steps)
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: "Output of `node --version`. Node 18+ is required."
+      placeholder: "v20.11.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: command
+    attributes:
+      label: Which command were you running?
+      options:
+        - setup (npx @hktitan/claude-poke / setup)
+        - start (claude-poke start)
+        - serve (claude-poke serve)
+        - other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: session-kind
+    attributes:
+      label: Session kind (if relevant)
+      description: "managed = launched/resumed by claude-poke · resumable = a past session on disk · live = a `claude` running in your terminal. Leave as N/A if the bug is not about a specific session."
+      options:
+        - N/A — not session-specific
+        - managed
+        - resumable
+        - live
+    validations:
+      required: false
+  - type: dropdown
+    id: permission-mode
+    attributes:
+      label: Permission mode
+      description: "The permission mode the session was started with (or the default in your config)."
+      options:
+        - N/A — not session-specific
+        - bypassPermissions (default)
+        - acceptEdits
+        - plan
+        - default
+    validations:
+      required: false
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: "What did you do? Include the Poke text you sent and/or the exact CLI command. Numbered steps are ideal."
+      placeholder: |
+        1. Ran `claude-poke start`
+        2. Texted Poke: "Start a Claude session in C:/code/app and add tests"
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      description: "Paste any error output or bridge logs. This is automatically formatted as code, so no backticks needed."
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help (other MCP servers, antivirus/firewall, VPN, pm2/systemd, etc.).
+    validations:
+      required: false
