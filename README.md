@@ -10,18 +10,27 @@
 Everything runs locally on your machine. No deployment, **no API key** (it uses the Claude Code login
 already on your PC — your claude.ai subscription). One command sets it up.
 
+This package is **not on the public npm registry** — it lives on **GitHub Packages**. So `npx @hktitan/claude-poke`
+alone gives a 404. Use one of these instead:
+
+**Easiest — run straight from the repo (no token):**
+
 ```
-npx @hktitan/claude-poke
+npx github:HKTITAN/claude-poke
 ```
 
-> **One-time install setup (GitHub Packages).** This package is published to GitHub Packages, which
-> requires auth even for public packages. Before the `npx` above works, add an `.npmrc` (in the folder
-> you run it from, or `~/.npmrc`) with a [GitHub token](https://github.com/settings/tokens) that has
-> `read:packages`:
-> ```
-> @hktitan:registry=https://npm.pkg.github.com
-> //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-> ```
+That clones, builds, and runs it. Pass a command too, e.g. `npx github:HKTITAN/claude-poke setup`.
+
+**Or install the published package from GitHub Packages** (needs auth — GitHub Packages requires it even
+for public packages). Add an `.npmrc` (in the folder you run from, or `~/.npmrc`) with a
+[GitHub token](https://github.com/settings/tokens) that has `read:packages`:
+
+```
+@hktitan:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+```
+
+…then `npx @hktitan/claude-poke` works.
 
 Then text Poke things like:
 
@@ -84,9 +93,12 @@ Long tasks return immediately with a `session_id`; Poke polls `get_session` or w
 
 ### Run it
 ```bash
-npx @hktitan/claude-poke      # guided setup / doctor (saves to ~/.claude-poke/config.json)
-claude-poke start             # connects this machine to your Poke as the "Claude Code" integration
+npx github:HKTITAN/claude-poke          # guided setup / doctor (saves to ~/.claude-poke/config.json)
+npx github:HKTITAN/claude-poke start    # connects this machine to your Poke as the "Claude Code" integration
 ```
+*(Or, if you installed from GitHub Packages with the `.npmrc` above: `npx @hktitan/claude-poke` and
+`claude-poke start`. Installing it globally — `npm i -g @hktitan/claude-poke` — gives you the short
+`claude-poke` command.)*
 Then, **one time**, open the **Claude Code recipe** in Poke to add the onboarding:
 
 > **[poke.com/r/Egtr2rOr5Xk](https://poke.com/r/Egtr2rOr5Xk)**
