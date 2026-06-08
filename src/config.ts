@@ -8,7 +8,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
-import { randomBytes } from "node:crypto";
 
 export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
 
@@ -52,7 +51,9 @@ export function configExists(): boolean {
 export function defaultConfig(): Config {
   return {
     port: 4517,
-    sharedSecret: randomBytes(24).toString("hex"),
+    // Empty by default: `poke tunnel` can't attach a bearer, so the tunnel + 127.0.0.1 bind is the
+    // boundary. Set CLAUDE_POKE_SECRET only for advanced remote setups (`poke mcp add <url> -k ...`).
+    sharedSecret: "",
     defaultPermissionMode: "bypassPermissions",
     maxConcurrentSessions: 5,
     permissionTimeoutMs: 5 * 60 * 1000,

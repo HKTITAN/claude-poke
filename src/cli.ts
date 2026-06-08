@@ -130,9 +130,11 @@ async function start(): Promise<void> {
   );
 
   // No --recipe: the shared recipe is published once by the maintainer (RECIPE_URL). This tunnel
-  // just forwards the local port and registers the per-user "Claude Code" integration.
-  const args = [...POKE, "tunnel", url, "-n", "Claude Code", "-k", cfg.sharedSecret];
-  const tunnel = spawn("npx", args, { stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+  // just forwards the local port and registers the per-user "Claude Code" integration. `poke tunnel`
+  // has no API-key flag — the account-scoped tunnel + 127.0.0.1 bind is the boundary.
+  // Single command string (not args + shell:true) to avoid Node's DEP0190 warning.
+  const cmd = `npx ${POKE.join(" ")} tunnel "${url}" -n "Claude Code"`;
+  const tunnel = spawn(cmd, { stdio: ["ignore", "pipe", "pipe"], shell: true });
 
   let connected = false;
   const onChunk = (buf: Buffer) => {
@@ -173,14 +175,14 @@ async function serve(): Promise<void> {
   await startServer(cfg);
   const url = `http://localhost:${cfg.port}/mcp`;
   console.log(`claude-poke MCP server on ${url}`);
-  console.log(`Connect it to Poke yourself (the secret is in ${configPath()}, field "sharedSecret"):`);
-  console.log(`  npx ${POKE.join(" ")} tunnel ${url} -n "Claude Code" -k <sharedSecret>`);
+  console.log(`Connect it to Poke yourself:`);
+  console.log(`  npx ${POKE.join(" ")} tunnel ${url} -n "Claude Code"`);
   console.log(`Then add the Claude Code recipe to your Poke: ${RECIPE_URL}`);
 }
 
 function recipe(): void {
   console.log(`Add the Claude Code recipe to your Poke account (one-time):\n  ${RECIPE_URL}\n`);
-  console.log(`Then run \`claude-poke start\` to connect this machine's bridge.`);
+  console.log(`Then run \`${launchHint()}\` to connect this machine's bridge.`);
 }
 
 async function status(): Promise<void> {

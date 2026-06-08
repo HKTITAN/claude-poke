@@ -22,6 +22,10 @@ export function secretsMatch(token: string, secret: string): boolean {
 }
 
 function checkAuth(req: Request, secret: string): boolean {
+  // No secret configured → trust the channel: the bridge binds 127.0.0.1 and Poke reaches it only
+  // through Poke's account-scoped tunnel (which can't attach a bearer). Setting an optional secret
+  // (CLAUDE_POKE_SECRET) is for advanced remote setups registered via `poke mcp add <url> -k <secret>`.
+  if (!secret) return true;
   const auth = req.header("authorization") ?? "";
   if (!auth.startsWith("Bearer ")) return false;
   return secretsMatch(auth.slice("Bearer ".length).trim(), secret);

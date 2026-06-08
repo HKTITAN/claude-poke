@@ -11,8 +11,8 @@
       "type": "mcp",
       "transport": "streamable-http",
       "perUser": true,
-      "urlNote": "NOT a fixed URL. Each user connects their OWN bridge: `claude-poke start` runs `poke tunnel -n \"Claude Code\" -k <secret>`, which registers their local tunnel as the 'Claude Code' integration in their own Poke account. The published recipe supplies the onboarding context; the connection is per-user.",
-      "auth": { "type": "apiKey", "header": "Authorization: Bearer <sharedSecret>", "note": "Each user's own auto-generated bridge secret; passed by their `start` via `poke tunnel -k`. Not shared across users." },
+      "urlNote": "NOT a fixed URL. Each user connects their OWN bridge: `claude-poke start` runs `poke tunnel -n \"Claude Code\"`, which registers their local tunnel as the 'Claude Code' integration in their own Poke account. The published recipe supplies the onboarding context; the connection is per-user.",
+      "auth": { "type": "none", "note": "`poke tunnel` can't attach a bearer; the account-scoped tunnel + 127.0.0.1 bind is the boundary. An optional CLAUDE_POKE_SECRET applies only to remote `poke mcp add -k` deployments." },
       "shared": false
     }
   ]

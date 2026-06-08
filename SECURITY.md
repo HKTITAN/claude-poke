@@ -8,15 +8,18 @@ does, the security model is unusually concentrated. Please read the threat model
 
 claude-poke runs Claude Code on your machine **at maximum power by default** (`bypassPermissions` — file
 edits plus raw shell) and **in any folder you point it at**. The MCP server binds only to `127.0.0.1`,
-and the single ingress is Poke's authenticated tunnel: every request must present an auto-generated
-24-byte **bearer secret** (`Authorization: Bearer …`), which is checked in constant time; everything
-else gets a `401`. That bearer secret is therefore the **only trust boundary**. Anyone who obtains it —
-by seeing your recipe link/secret, reading it from the process list on a shared machine (the `poke
-tunnel` CLI receives it as an argument), or pulling it from `~/.claude-poke/config.json` — can drive
-Claude Code on your PC with raw-shell access to your files. Treat the secret like an SSH private key.
-claude-poke does not add a sandbox of its own beyond the bearer check and the local bind; sessions do
-run with `settingSources: []`, so your personal `~/.claude` config and memory are not loaded into a
-session's settings, but that is isolation of configuration, not of capability.
+and Poke reaches it through **Poke's own tunnel, registered in your Poke account** (account-scoped — only
+your Poke can route to it). The `poke tunnel` CLI cannot attach a bearer token, so by default there is no
+per-request secret: the **trust boundary is the tunnel plus the local-only bind**. Two consequences:
+(1) other processes running on the same machine can also reach `localhost:<port>/mcp` and drive Claude
+Code, so treat the host as you would any trusted dev machine; and (2) anyone who obtains your tunnel /
+recipe link could reach your bridge, so don't share them. An **optional** bearer secret
+(`CLAUDE_POKE_SECRET` / `sharedSecret`) can be enabled for a *remote* deployment registered via
+`poke mcp add <https-url> -k <secret>`, in which case every request must present
+`Authorization: Bearer …` (constant-time checked, else `401`); it does not apply to the local tunnel
+flow. claude-poke adds no sandbox of its own beyond the local bind; sessions do run with
+`settingSources: []`, so your personal `~/.claude` config and memory are not loaded into a session's
+settings, but that is isolation of configuration, not of capability.
 
 ## Supported versions
 
@@ -66,21 +69,20 @@ auth-bypass reports seriously and prioritize them.
 
 ## Hardening checklist for users
 
-The bearer secret is the whole game. To keep it that way:
+The tunnel and the local-only bind are the boundary. To keep it tight:
 
-- **Protect and rotate the secret.** Don't share your recipe link or the `sharedSecret`. Rotate it by
-  deleting `sharedSecret` from `~/.claude-poke/config.json` and re-running setup (`npx
-  @hktitan/claude-poke`). Rotate immediately if you suspect exposure.
-- **Don't run on shared or untrusted machines.** `poke tunnel` receives the secret as a CLI argument,
-  which is visible in the process list to other users on a multi-user box. Run claude-poke only on a
-  machine you alone control.
+- **Run only on a machine you trust.** With no bearer by default, any process on the same machine can
+  reach `localhost:<port>/mcp` and drive Claude Code. Don't run claude-poke alongside untrusted local
+  software, and don't run it on a shared/multi-user box.
+- **Don't share your recipe link or tunnel.** They route to your machine. Treat them like a credential.
 - **Dial down the permission mode.** The default is `bypassPermissions` (unrestricted shell). If you
   don't need that, start sessions with `permission_mode: 'plan'` (proposals only) or `'acceptEdits'`,
-  or set a tighter default in `~/.claude-poke/config.json`. Lower power means a leaked secret does less
-  damage.
+  or set a tighter default in `~/.claude-poke/config.json`. Lower power means less blast radius.
 - **Keep the bind local.** The bridge listens on `127.0.0.1` and reaches the outside world only through
-  Poke's authenticated tunnel. Don't expose the port directly or place it behind your own reverse proxy
-  — that removes the bearer check as the sole, deliberate boundary.
+  Poke's account-scoped tunnel. Don't expose the port directly or behind your own proxy.
+- **Optional bearer for remote setups.** If you deploy the server remotely (not the local tunnel) and
+  register it with `poke mcp add <https-url> -k <secret>`, set `CLAUDE_POKE_SECRET` so every request must
+  present a matching `Authorization: Bearer …`. Rotate it by clearing it and restarting.
 - **Stop the bridge when you're not using it.** Sessions run only while `claude-poke start` is running.
   Shutting it down closes the tunnel and the attack surface.
 - **Stay current.** Run supported `0.2.x` and update when security releases ship.

@@ -55,9 +55,10 @@ This starts only the MCP server, bound to `127.0.0.1:4517` (override with `PORT`
 `http://localhost:<port>/mcp` URL plus the bearer secret location. Then drive it directly:
 
 - **Health check (unauthenticated):** `curl http://localhost:4517/healthz` → `{"ok":true}`.
-- **MCP calls (authenticated):** every `POST /mcp` requires `Authorization: Bearer <sharedSecret>`; anything
-  else gets `401`. The secret lives in `~/.claude-poke/config.json` under `sharedSecret` (auto-generated on
-  first `setup`). You can also pin it for a dev session with `CLAUDE_POKE_SECRET=...`.
+- **MCP calls:** `POST /mcp` is open by default (the local tunnel can't attach a bearer, so the boundary is
+  the tunnel + `127.0.0.1` bind). Set `CLAUDE_POKE_SECRET=...` (or `sharedSecret` in config) to *opt in* to
+  bearer enforcement — then every `POST /mcp` must send `Authorization: Bearer <secret>` or gets `401`.
+  That path is for remote deployments registered via `poke mcp add <url> -k <secret>`.
 
 Handy env overrides (see `loadConfig()` in `src/config.ts`): `PORT`, `CLAUDE_POKE_SECRET`, `POKE_API_KEY`,
 and `CLAUDE_POKE_RECIPE_URL`.

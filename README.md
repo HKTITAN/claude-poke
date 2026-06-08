@@ -129,18 +129,23 @@ still works — Poke just polls `get_session`.
 ## Security — read this
 
 This lets Poke run Claude Code on your machine, by default at **maximum power (raw shell), in any folder**.
-The **bearer secret is the only trust boundary** — anyone who has it can drive Claude Code on this PC.
 
-- **Bearer secret:** Poke must present an auto-generated 24-byte secret (`Authorization: Bearer …`),
-  constant-time checked; everything else gets `401`. Don't share the recipe link/secret. Rotate by
-  deleting `sharedSecret` from `~/.claude-poke/config.json` and re-running setup.
-- **Local-only bind:** the bridge listens on `127.0.0.1`; Poke's authenticated tunnel is the only ingress.
+- **Trust boundary = the tunnel + the `127.0.0.1` bind.** The bridge listens only on localhost, and Poke
+  reaches it through **Poke's own tunnel, registered in *your* Poke account** (account-scoped — only your
+  Poke can route to it). `poke tunnel` cannot attach a bearer token, so there is no per-request secret by
+  default; the boundary is the tunnel and the local-only bind.
+- **Same-machine caveat.** Because there's no bearer by default, *other processes running on this PC* can
+  also reach `localhost:<port>/mcp` and drive Claude Code. Treat this like any dev machine — run it on a
+  machine you trust, and don't point it at folders you wouldn't let a shell script touch.
 - **Isolation:** sessions run with `settingSources: []`, so your personal `~/.claude` config/memory
   doesn't leak into a session's settings.
 - **Dial it down:** start sessions with `permission_mode: 'plan'` (proposals only) or `'acceptEdits'`,
   or set a default in the config, if you don't want unrestricted shell.
-- **Shared machines:** `poke tunnel` receives the secret as a CLI argument (visible in the process list).
-  Don't run this on a multi-user/untrusted machine.
+- **Optional bearer (advanced/remote).** Set `CLAUDE_POKE_SECRET` (or `sharedSecret` in the config) and the
+  server enforces `Authorization: Bearer …` (constant-time checked, else `401`). This only helps for a
+  *remote* deployment you register with `poke mcp add <https-url> -n "Claude Code" -k <secret>` — the local
+  `poke tunnel` flow can't send it.
+- **Don't share your recipe link or tunnel.** They point at your machine.
 
 ## Maintainer: publish the recipe (once)
 
