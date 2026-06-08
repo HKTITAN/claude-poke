@@ -93,7 +93,7 @@ async function setup(opts: { chainToStart?: boolean } = {}): Promise<void> {
     p.outro(
       `All set! Two steps:\n\n` +
         `  1. Add the Claude Code recipe to your Poke (one-time): ${RECIPE_URL}\n` +
-        `  2. Run:  claude-poke start   (connects this machine to your Poke)\n\n` +
+        `  2. Run:  ${launchHint()}   (connects this machine to your Poke)\n\n` +
         `Then text Poke, e.g. "list my Claude sessions" or "start a Claude session in C:/path/to/project and add tests".\n` +
         `Tip: keep this PC awake while you use it — sleeping disconnects Poke.`,
     );
@@ -210,12 +210,21 @@ function run(cmd: string): Promise<void> {
     child.on("error", () => res());
   });
 }
+/** Best command to (re)launch the bridge — `claude-poke` if globally installed, else the npx form. */
+function launchHint(): string {
+  try {
+    execSync(process.platform === "win32" ? "where claude-poke" : "command -v claude-poke", { stdio: "ignore" });
+    return "claude-poke";
+  } catch {
+    return "npx github:HKTITAN/claude-poke";
+  }
+}
 
 // ---------------------------------------------------------------- main
 const program = new Command();
 program.name("claude-poke").description("Let Poke run & control Claude Code on your own machine.").version("0.2.1");
-program.command("setup", { isDefault: true }).description("Guided setup / doctor").action(() => setup());
-program.command("start").description("Launch the bridge + Poke tunnel").action(start);
+program.command("setup").description("Guided setup / doctor").action(() => setup());
+program.command("start", { isDefault: true }).description("Connect to Poke (runs setup first if needed)").action(start);
 program.command("serve").description("Start just the MCP server (advanced / pm2)").action(serve);
 program.command("recipe").description("(Re)mint and show your Poke recipe link").action(recipe);
 program.command("doctor").description("Re-run environment checks (no prompts)").action(doctor);

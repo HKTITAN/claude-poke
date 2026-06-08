@@ -19,7 +19,7 @@ alone gives a 404. Use one of these instead:
 npx github:HKTITAN/claude-poke
 ```
 
-That clones, builds, and runs it. Pass a command too, e.g. `npx github:HKTITAN/claude-poke setup`.
+That clones, builds, and runs it — first run sets you up, then connects to Poke; later runs just connect.
 
 **Or install the published package from GitHub Packages** (needs auth — GitHub Packages requires it even
 for public packages). Add an `.npmrc` (in the folder you run from, or `~/.npmrc`) with a
@@ -93,12 +93,13 @@ Long tasks return immediately with a `session_id`; Poke polls `get_session` or w
 
 ### Run it
 ```bash
-npx github:HKTITAN/claude-poke          # guided setup / doctor (saves to ~/.claude-poke/config.json)
-npx github:HKTITAN/claude-poke start    # connects this machine to your Poke as the "Claude Code" integration
+npx github:HKTITAN/claude-poke
 ```
-*(Or, if you installed from GitHub Packages with the `.npmrc` above: `npx @hktitan/claude-poke` and
-`claude-poke start`. Installing it globally — `npm i -g @hktitan/claude-poke` — gives you the short
-`claude-poke` command.)*
+The **first run** walks you through setup (Claude login, Poke login, optional notifications), then connects
+this machine to your Poke. **Later runs** just connect. Keep it running while you use it.
+
+*(Installed globally with `npm i -g @hktitan/claude-poke`? Just run `claude-poke`. From GitHub Packages?
+`npx @hktitan/claude-poke`. Explicit subcommands still work: `setup`, `serve`, `doctor`, `status`, `recipe`.)*
 Then, **one time**, open the **Claude Code recipe** in Poke to add the onboarding:
 
 > **[poke.com/r/Egtr2rOr5Xk](https://poke.com/r/Egtr2rOr5Xk)**
